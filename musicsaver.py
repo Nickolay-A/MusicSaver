@@ -3,6 +3,8 @@ import os
 import re
 import yt_dlp
 
+from yt_dlp.utils import DownloadError
+
 
 def save_music(url: str) -> None:
     """Функция для схранения аудидорожки из видео на YouTube
@@ -22,8 +24,12 @@ def save_music(url: str) -> None:
                                 'preferredquality': '192'
                             }]}
                         )
+    try:
+        info = ydl.extract_info(url, download=False)
+    except DownloadError:
+        print('Файл по данной ссылке не доступен')
+        return None
 
-    info = ydl.extract_info(url, download=False)
     audio_title = re.sub(r'\([^)]*\)', '', info['title']).strip('. ')
 
     ydl = yt_dlp.YoutubeDL({
@@ -47,5 +53,12 @@ if __name__ == '__main__':
     with open('urls.txt', 'r', encoding='utf-8') as file:
         urls = file.readlines()
 
+    REGEX = \
+        r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})'
+
     for url_ in urls:
-        save_music(url=url_)
+        match = re.search(REGEX, url_)
+        if match:
+            save_music(url=url_)
+        else:
+            print('Ссылка на явлется ссылкой на YouTube-видео.')
