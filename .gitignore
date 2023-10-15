@@ -1,5 +1,7 @@
 *.ipynb
+*.env
 
 urls.txt
 data
 data_
+named_songs
