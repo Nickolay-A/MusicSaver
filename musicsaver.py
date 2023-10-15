@@ -132,10 +132,11 @@ def main():
     regex = \
         r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})'
 
-    for url_ in urls:
-        match = re.search(regex, url_)
+    for index, url in enumerate(urls):
+        print(f'Обрабатываю ссылку номер {index} из {len(urls)}')
+        match = re.search(regex, url)
         if match:
-            file_path = save_music(url=url_)
+            file_path = save_music(url=url)
             if file_path:
                 rename_song(file_path)
         else:
