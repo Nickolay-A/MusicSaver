@@ -13,9 +13,12 @@ async def recognize_song(file_path: str) -> tuple[str]|None:
 def main(file_path):
     """main-function"""
     loop = asyncio.get_event_loop()
-    song_title, artist_name = loop.run_until_complete(recognize_song(file_path))
+    result = loop.run_until_complete(recognize_song(file_path))
+    if result:
+        song_title, artist_name = result
+    loop.close()
     print(song_title, artist_name, sep='\n')
 
 
 if __name__ == '__main__':
-    main(r'data\Павел Пламенев - Ночь перед боем.mp3')
+    main(r'data\2Pac - California Love feat. Dr. Dre   HD.mp3')

@@ -2,16 +2,17 @@
 import os
 import re
 import time
-import subprocess
+import asyncio
 import yt_dlp
 
 from yt_dlp.utils import DownloadError
 from pydub import AudioSegment
 from mutagen.mp3 import MP3
+from shazam_recognizer import recognize_song
 
 
 def compare_audio_duration(file_path: str) -> bool|str:
-    """Служебная функция для проверки целостности mp3 файла
+    """служебная функция для проверки целостности mp3 файла
     если файл не удалось открыть - возникает исключение
     если файл не проигрывается полностью (разность в заявленной 
     и фактической продолжительности больше 1 сек) - вернет False
@@ -28,8 +29,7 @@ def compare_audio_duration(file_path: str) -> bool|str:
         return False
 
 def retry_on_error(max_retries=3):
-    """
-    функция-декоратор для повторного использования вложенной функции
+    """функция-декоратор для повторного использования вложенной функции
     если вложенная функция вернула False или возникло исключение - она будет вызвана еще раз
     количество раз по умолчанию равно 3
     """
@@ -42,7 +42,7 @@ def retry_on_error(max_retries=3):
                     result = func(*args, **kwargs)
                     if result:
                         break
-                except Exception as error: # pylint: disable=broad-except
+                except Exception as error:  # pylint: disable=broad-except
                     print(f'Попытка {retries + 1} завершилась ошибкой: {error}')
                     retries += 1
                     time.sleep(1)
@@ -56,7 +56,7 @@ def retry_on_error(max_retries=3):
 
 @retry_on_error()
 def save_music(url: str) -> bool|str:
-    """Функция для сохранения аудиодорожки из видео на YouTube
+    """функция для сохранения аудиодорожки из видео на YouTube
     на вход принимает ссылку на виедо
     Имя выходного файла будет состоять из имени исходного видео
     скобки в названии видео (где чаще всего указвают инфу о видео) обрезаются"""
@@ -97,26 +97,31 @@ def save_music(url: str) -> bool|str:
 
     return compare_audio_duration(os.path.join('data', f'{audio_title}.mp3'))
 
+def sanitize_filename(filename: str) -> str:
+    """функция для очистки имени файла"""
+    sanitized_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+    sanitized_filename = sanitized_filename.strip()
+    return sanitized_filename
+
 def rename_song(file_path: str) -> None:
     """Функция, которая присваивает аудиофайлу название и имя исполнителя
-    перемещает песню в папку named_songs, иначе оставляет в прежней папке"""
+    перемещает песню в папку named_songs если для песни найдены эти данные,
+    иначе оставляет в прежней папке"""
     if not os.path.exists('named_songs'):
         os.makedirs('named_songs')
 
-    result = subprocess.run([
-                                'python',
-                                'shazam_recognizer.py',
-                                file_path
-                            ],
-                            capture_output=True,
-                            text=True,
-                            check=False)
-    if result.stdout:
-        song_title, artist_name = result.stdout.strip().split('\n')
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(recognize_song(file_path))
+
+    if result:
+        song_title, artist_name = result
         audio = AudioSegment.from_file(file_path, format='mp3')
-        audio.export(os.path.join('named_songs', f'{song_title}.mp3'),
+        new_name = f'{song_title} - {artist_name}.mp3'
+        new_name = sanitize_filename(new_name)
+        audio.export(os.path.join('named_songs', new_name),
                     format='mp3',
-                    tags={'title': song_title, 'artist': artist_name})
+                    tags={'title': song_title,
+                          'artist': artist_name})
         os.remove(file_path)
 
 def main():

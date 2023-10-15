@@ -1,5 +1,6 @@
 *.ipynb
 *.env
+*__pycache__
 
 urls.txt
 data
