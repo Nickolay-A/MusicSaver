@@ -11,6 +11,8 @@ from mutagen.mp3 import MP3
 from shazam_recognizer import recognize_song
 
 
+LOGGING = False
+
 def compare_audio_duration(file_path: str) -> bool|str:
     """служебная функция для проверки целостности mp3 файла
     если файл не удалось открыть - возникает исключение
@@ -49,6 +51,7 @@ def retry_on_error(max_retries=3):
 
             if retries >= max_retries:
                 print('Сохранить целый файл не удалось')
+                return None
 
             return result
         return wrapper
@@ -125,6 +128,21 @@ def rename_song(file_path: str) -> None:
                           'album': album})
         os.remove(file_path)
 
+def logging(url: str) -> None:
+    """функция для логирования. В случае, если какую-то из ссылок не
+    удалось полностью обработать, она будет записана в файл log.txt"""
+    global LOGGING
+
+    if LOGGING:
+        pass
+    else:
+        if os.path.exists('log.txt'):
+            os.remove('log.txt')
+        LOGGING = True
+
+    with open('log.txt', 'a', encoding='utf-8') as file:
+        file.write(url)
+
 def main():
     """main-function"""
     with open('urls.txt', 'r', encoding='utf-8') as file:
@@ -140,8 +158,11 @@ def main():
             file_path = save_music(url=url)
             if file_path:
                 rename_song(file_path)
+            else:
+                logging(url)
         else:
             print('Ссылка на явлется ссылкой на YouTube-видео.')
+            logging(url)
 
 
 if __name__ == '__main__':
