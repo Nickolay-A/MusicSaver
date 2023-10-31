@@ -8,9 +8,19 @@ async def recognize_song(file_path: str) -> tuple[str]|None:
     shazam = Shazam()
     result = await shazam.recognize_song(file_path)
     track = result.get('track', None)
-    return (track['sections'][0]['metadata'][0]['text'],
-            track['title'],
-            track['subtitle']) if track else None
+    if track:
+        title = track.get('title', 'UnknownTitle')
+        subtitle = track.get('subtitle', 'UnknownSubtitle')
+        sections = track.get('sections', [{},])
+        if sections:
+            metadata = sections[0].get('metadata', [{},])
+            if metadata:
+                album = metadata[0].get('text', 'UnknownAlbum')
+            else:
+                album = 'UnknownAlbum'
+        else:
+            album = 'UnknownAlbum'
+    return (album, title, subtitle) if track else None
 
 def main(file_path):
     """main-function"""
@@ -23,4 +33,4 @@ def main(file_path):
 
 
 if __name__ == '__main__':
-    main(r'data\Петропавловск - RADIO TAPOK.mp3')
+    main(r'data\Мясной бор - RADIO TAPOK.mp3')
