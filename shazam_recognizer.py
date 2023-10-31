@@ -8,17 +8,19 @@ async def recognize_song(file_path: str) -> tuple[str]|None:
     shazam = Shazam()
     result = await shazam.recognize_song(file_path)
     track = result.get('track', None)
-    return (track['title'], track['subtitle']) if track else None
+    return (track['sections'][0]['metadata'][0]['text'],
+            track['title'],
+            track['subtitle']) if track else None
 
 def main(file_path):
     """main-function"""
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(recognize_song(file_path))
     if result:
-        song_title, artist_name = result
+        album, song_title, artist_name = result
     loop.close()
-    print(song_title, artist_name, sep='\n')
+    print(album, song_title, artist_name, sep='\n')
 
 
 if __name__ == '__main__':
-    main(r'data\2Pac - California Love feat. Dr. Dre   HD.mp3')
+    main(r'data\Петропавловск - RADIO TAPOK.mp3')

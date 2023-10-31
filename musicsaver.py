@@ -114,14 +114,15 @@ def rename_song(file_path: str) -> None:
     result = loop.run_until_complete(recognize_song(file_path))
 
     if result:
-        song_title, artist_name = result
+        album, song_title, artist_name = result
         audio = AudioSegment.from_file(file_path, format='mp3')
         new_name = f'{song_title} - {artist_name}.mp3'
         new_name = sanitize_filename(new_name)
         audio.export(os.path.join('named_songs', new_name),
                     format='mp3',
                     tags={'title': song_title,
-                          'artist': artist_name})
+                          'artist': artist_name,
+                          'album': album})
         os.remove(file_path)
 
 def main():
@@ -132,7 +133,7 @@ def main():
     regex = \
         r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})'
 
-    for index, url in enumerate(urls):
+    for index, url in enumerate(urls, 1):
         print(f'Обрабатываю ссылку номер {index} из {len(urls)}')
         match = re.search(regex, url)
         if match:
