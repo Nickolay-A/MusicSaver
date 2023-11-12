@@ -1,7 +1,7 @@
 *.ipynb
-*.env
 *__pycache__
 
+envs
 urls.txt
 log.txt
 data
