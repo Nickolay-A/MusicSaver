@@ -30,6 +30,12 @@ def compare_audio_duration(file_path: str) -> bool|str:
     else:
         return False
 
+def sanitize_filename(filename: str) -> str:
+    """функция для очистки имени файла"""
+    sanitized_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+    sanitized_filename = sanitized_filename.strip()
+    return sanitized_filename
+
 def retry_on_error(max_retries=3):
     """функция-декоратор для повторного использования вложенной функции
     если вложенная функция вернула False или возникло исключение - она будет вызвана еще раз
@@ -83,6 +89,7 @@ def save_music(url: str) -> bool|str:
         return None
 
     audio_title = re.sub(r'\([^)]*\)', '', info['title']).strip('. ')
+    audio_title = sanitize_filename(audio_title)
 
     ydl = yt_dlp.YoutubeDL({
                 'format': 'bestaudio/best',
@@ -99,12 +106,6 @@ def save_music(url: str) -> bool|str:
         ydl.download([url])
 
     return compare_audio_duration(os.path.join('data', f'{audio_title}.mp3'))
-
-def sanitize_filename(filename: str) -> str:
-    """функция для очистки имени файла"""
-    sanitized_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-    sanitized_filename = sanitized_filename.strip()
-    return sanitized_filename
 
 def rename_song(file_path: str) -> None:
     """Функция, которая присваивает аудиофайлу название и имя исполнителя
