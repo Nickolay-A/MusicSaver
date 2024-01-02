@@ -2,10 +2,10 @@
 import os
 import re
 import time
+import logging
 import asyncio
 import yt_dlp
 
-from yt_dlp.utils import DownloadError
 from pydub import AudioSegment
 from mutagen.mp3 import MP3
 from shazam_recognizer import recognize_song
@@ -45,16 +45,16 @@ def retry_on_error(max_retries=3):
 
             while retries < max_retries:
                 try:
+                    retries += 1
                     result = func(*args, **kwargs)
                     if result:
                         break
                 except Exception as error:  # pylint: disable=broad-except
-                    print(f'Попытка {retries + 1} завершилась ошибкой: {error}')
-                    retries += 1
+                    logging.warning(f'Попытка {retries} завершилась ошибкой: {error}')
                     time.sleep(1)
 
             if retries >= max_retries:
-                print('Сохранить целый файл не удалось')
+                logging.error('Сохранить целый файл не удалось\n')
                 return None
 
             return result
@@ -73,21 +73,19 @@ def save_music(url: str) -> bool|str:
     url = re.sub(r"[&].*", "", url)
 
     ydl = yt_dlp.YoutubeDL({
-                            'format': 'bestaudio/best',
-                            'postprocessors': [{
-                                'key': 'FFmpegExtractAudio',
-                                'preferredcodec': 'mp3',
-                                'preferredquality': '192'
-                            }]}
-                        )
-    try:
-        info = ydl.extract_info(url, download=False)
-    except DownloadError:
-        print('Файл по данной ссылке не доступен')
-        return None
+        'format': 'bestaudio/best',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192'
+            }]
+        })
+    info = ydl.extract_info(url, download=False)
+    logging.info("Файл загружен")
 
     audio_title = re.sub(r'\([^)]*\)', '', info['title']).strip('. ')
     audio_title = sanitize_filename(audio_title)
+    logging.info("Имя исходного файла преобразовано")
 
     ydl = yt_dlp.YoutubeDL({
                 'format': 'bestaudio/best',
@@ -97,8 +95,7 @@ def save_music(url: str) -> bool|str:
                     'preferredquality': '192',
                 }],
                 'outtmpl': os.path.join('data', audio_title),
-                }
-            )
+                })
 
     with ydl:
         ydl.download([url])
@@ -120,18 +117,20 @@ def rename_song(file_path: str) -> None:
         audio = AudioSegment.from_file(file_path, format='mp3')
         new_name = f'{song_title} - {artist_name}.mp3'
         new_name = sanitize_filename(new_name)
-        audio.export(os.path.join('named_songs', new_name),
-                    format='mp3',
-                    tags={'title': song_title,
-                          'artist': artist_name,
-                          'album': album})
+        logging.info("Имя файла перед сохранением преобразовано")
+        audio.export(
+            os.path.join('named_songs', new_name),
+            format='mp3',
+            tags={
+                'title': song_title,
+                'artist': artist_name,
+                'album': album
+                })
         os.remove(file_path)
-
-def logging(url: str) -> None:
-    """функция для логирования. В случае, если какую-то из ссылок не
-    удалось полностью обработать, она будет записана в файл log.txt"""
-    with open('log.txt', 'a', encoding='utf-8') as file:
-        file.write(url)
+        logging.info("Файл распознан и перемещен\n")
+    else:
+        logging.warning("Файл НЕ распознан и НЕ перемещен\n")
+    return None
 
 def main():
     """main-function"""
@@ -139,21 +138,29 @@ def main():
         urls = file.readlines()
 
     regex = \
-        r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})'
+        r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})&'
 
     for index, url in enumerate(urls, 1):
-        print(f'Обрабатываю ссылку номер {index} из {len(urls)}')
+        logging.info(f'Обрабатываю ссылку номер {index}')
         match = re.search(regex, url)
         if match:
             file_path = save_music(url=url)
             if file_path:
                 rename_song(file_path)
             else:
-                logging(url)
+                pass
         else:
-            print('Ссылка на явлется ссылкой на YouTube-видео.')
-            logging(url)
+            logging.error(f"Ссылка номер {index} не является валидной\n")
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename="py_log.log",
+    filemode="w",
+    encoding="utf-8",
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 if __name__ == '__main__':
     main()

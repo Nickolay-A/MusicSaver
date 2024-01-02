@@ -3,7 +3,6 @@
 
 envs
 urls.txt
-log.txt
+py_log.log
 data
-data_
 named_songs
