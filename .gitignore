@@ -1,4 +1,5 @@
 *.ipynb
+*.spec
 *__pycache__
 
 envs
@@ -7,3 +8,5 @@ urls.txt
 py_log.log
 data
 named_songs
+build
+dist

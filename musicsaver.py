@@ -81,7 +81,7 @@ def save_music(url: str) -> bool|str:
             }]
         })
     info = ydl.extract_info(url, download=False)
-    logging.info("Файл загружен")
+    logging.info("Сведения о файле получены")
 
     audio_title = re.sub(r'\([^)]*\)', '', info['title']).strip('. ')
     audio_title = sanitize_filename(audio_title)
@@ -99,6 +99,7 @@ def save_music(url: str) -> bool|str:
 
     with ydl:
         ydl.download([url])
+    logging.info("Файл загружен")
 
     return compare_audio_duration(os.path.join('data', f'{audio_title}.mp3'))
 
