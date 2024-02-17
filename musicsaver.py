@@ -51,7 +51,7 @@ def retry_on_error(max_retries=3):
                         break
                 except Exception as error:  # pylint: disable=broad-except
                     logging.warning(f'Попытка {retries} завершилась ошибкой: {error}')
-                    time.sleep(1)
+                    time.sleep(10)
 
             if retries >= max_retries:
                 logging.error('Сохранить целый файл не удалось\n')
@@ -92,7 +92,7 @@ def save_music(url: str) -> bool|str:
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '192',
+                    'preferredquality': '320',
                 }],
                 'outtmpl': os.path.join('data', audio_title),
                 })
@@ -103,10 +103,12 @@ def save_music(url: str) -> bool|str:
 
     return compare_audio_duration(os.path.join('data', f'{audio_title}.mp3'))
 
+@retry_on_error()
 def rename_song(file_path: str) -> None:
     """Функция, которая присваивает аудиофайлу название и имя исполнителя
     перемещает песню в папку named_songs если для песни найдены эти данные,
     иначе оставляет в прежней папке"""
+    logging.info("Начинаю распознавать файл")
     if not os.path.exists('named_songs'):
         os.makedirs('named_songs')
 
