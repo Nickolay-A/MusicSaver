@@ -6,6 +6,7 @@ import logging
 import asyncio
 import yt_dlp
 
+from tqdm import tqdm
 from pydub import AudioSegment
 from mutagen.mp3 import MP3
 from shazam_recognizer import recognize_song
@@ -72,39 +73,37 @@ def save_music(url: str) -> bool|str:
 
     url = re.sub(r"[&].*", "", url)
 
-    ydl = yt_dlp.YoutubeDL({
+    ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '192'
-            }]
-        })
-    info = ydl.extract_info(url, download=False)
-    logging.info("Сведения о файле получены")
+            'preferredquality': '320',
+        }],
+        'logger': logging.getLogger(),
+    }
 
-    audio_title = re.sub(r'\([^)]*\)', '', info['title']).strip('. ')
-    audio_title = sanitize_filename(audio_title)
-    logging.info("Имя исходного файла преобразовано")
+    logging.getLogger("yt_dlp").setLevel(logging.WARNING)
 
-    ydl = yt_dlp.YoutubeDL({
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '320',
-                }],
-                'outtmpl': os.path.join('data', audio_title),
-                })
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        logging.info("Сведения о файле получены")
 
-    with ydl:
-        ydl.download([url])
-    logging.info("Файл загружен")
+        audio_title = re.sub(r'\([^)]*\)', '', info['title']).strip('. ')
+        audio_title = sanitize_filename(audio_title)
+        logging.info("Имя исходного файла преобразовано")
 
-    return compare_audio_duration(os.path.join('data', f'{audio_title}.mp3'))
+        ydl_opts['postprocessors'][0]['preferredquality'] = '320'
+        ydl_opts['outtmpl'] = os.path.join('data', audio_title)
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+        logging.info("Файл загружен")
+
+    return os.path.join('data', f'{audio_title}.mp3')
 
 @retry_on_error()
-def rename_song(file_path: str) -> None:
+def rename_song(file_path: str) -> bool:
     """Функция, которая присваивает аудиофайлу название и имя исполнителя
     перемещает песню в папку named_songs если для песни найдены эти данные,
     иначе оставляет в прежней папке"""
@@ -133,7 +132,7 @@ def rename_song(file_path: str) -> None:
         logging.info("Файл распознан и перемещен\n")
     else:
         logging.warning("Файл НЕ распознан и НЕ перемещен\n")
-    return None
+    return True
 
 def main():
     """main-function"""
@@ -141,13 +140,14 @@ def main():
         urls = file.readlines()
 
     regex = \
-        r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})&'
+        r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})'
 
-    for index, url in enumerate(urls, 1):
+    for index, url in tqdm(enumerate(urls, 1)):
         logging.info(f'Обрабатываю ссылку номер {index}')
         match = re.search(regex, url)
         if match:
             file_path = save_music(url=url)
+            file_path = compare_audio_duration(file_path)
             if file_path:
                 rename_song(file_path)
             else:
