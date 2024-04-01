@@ -1,9 +1,9 @@
 """модуль для проверки целостности и переименования существующих файлов
 существующие файлы помещаются в папку data"""
-import glob
 import os
 import logging
 
+from tqdm import tqdm
 from musicsaver import compare_audio_duration, rename_song
 
 
@@ -13,13 +13,10 @@ def main() -> None:
     'main-function' """
     folder_path = 'data'
     music_files = [
-        os.path.join(folder_path, os.path.basename(file))
-        for file
-        in glob.glob(os.path.join(folder_path, '*'))
-        if os.path.basename(file).endswith('.mp3')
+        os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith('.mp3')
     ]
 
-    for index, file_path  in enumerate(music_files, 1):
+    for index, file_path  in tqdm(enumerate(music_files, 1)):
         logging.info(f'Обрабатываю файл номер {index}')
         flag = None
         try:

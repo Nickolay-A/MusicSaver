@@ -115,18 +115,28 @@ def rename_song(file_path: str) -> bool:
     result = loop.run_until_complete(recognize_song(file_path))
 
     if result:
-        album, song_title, artist_name = result
+
+        album = result.get('album', 'UnknownAlbum')
+        artist = result.get('artist', 'UnknownArtist')
+        title = result.get('song', 'UnknownTitle')
+        genre = result.get('genre', 'UnknownGenre')
+        year = result.get('year', 'UnknownYear')
+        if year:
+            year = int(year)
+
         audio = AudioSegment.from_file(file_path, format='mp3')
-        new_name = f'{song_title} - {artist_name}.mp3'
+        new_name = f'{title} - {artist}.mp3'
         new_name = sanitize_filename(new_name)
         logging.info("Имя файла перед сохранением преобразовано")
         audio.export(
             os.path.join('named_songs', new_name),
             format='mp3',
             tags={
-                'title': song_title,
-                'artist': artist_name,
-                'album': album
+                'title' : title,
+                'artist': artist,
+                'album' : album,
+                'genre' : genre,
+                'date'  : year,
                 })
         os.remove(file_path)
         logging.info("Файл распознан и перемещен\n")
