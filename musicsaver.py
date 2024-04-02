@@ -43,13 +43,12 @@ def retry_on_error(max_retries=3):
     def decorator(func):
         def wrapper(*args, **kwargs):
             retries = 0
-
             while retries < max_retries:
                 try:
                     retries += 1
                     result = func(*args, **kwargs)
                     if result:
-                        break
+                        return result
                 except Exception as error:  # pylint: disable=broad-except
                     logging.warning(f'Попытка {retries} завершилась ошибкой: {error}')
                     time.sleep(10)
@@ -57,8 +56,6 @@ def retry_on_error(max_retries=3):
             if retries >= max_retries:
                 logging.error('Сохранить целый файл не удалось\n')
                 return None
-
-            return result
         return wrapper
     return decorator
 
@@ -121,8 +118,6 @@ def rename_song(file_path: str) -> bool:
         title = result.get('song', 'UnknownTitle')
         genre = result.get('genre', 'UnknownGenre')
         year = result.get('year', 'UnknownYear')
-        if year:
-            year = int(year)
 
         audio = AudioSegment.from_file(file_path, format='mp3')
         new_name = f'{title} - {artist}.mp3'

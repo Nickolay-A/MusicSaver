@@ -10,6 +10,7 @@ async def recognize_song(file_path: str) -> dict:
     """Получает информацию о песне с помощью библиотеки shazamio"""
     shazam = Shazam()
     result = await shazam.recognize_song(file_path)
+    # pprint.pprint(result)
     track = result.get('track', None)
     album_info = dict()
     if track:
@@ -22,9 +23,8 @@ async def recognize_song(file_path: str) -> dict:
             if item['title'] == 'Released':
                 album_info['year'] = item.get('text', '')
 
-        metapages = sections[0].get('metapages',[])
-        album_info['song'] = metapages[1].get('caption', '')
-        album_info['artist'] = metapages[0].get('caption', '')
+        album_info['song'] = track.get('title', '')
+        album_info['artist'] = track.get('subtitle', '')
 
         genres = track.get('genres',{}).get('primary','')
         album_info['genre'] = genres
